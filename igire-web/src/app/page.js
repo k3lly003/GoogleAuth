@@ -14,7 +14,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="flex flex-col justify-center max-w-[84rem]">
+      <div className="flex flex-col justify-center w-full">
         {/* HERO SECTION */}
         <div className="bg-gradient-to-r from-white">
           <div
