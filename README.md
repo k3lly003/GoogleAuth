@@ -1,1 +1,1 @@
-# GoogleAuth backend
+# Igire Rwanda Organisation Frontend website
