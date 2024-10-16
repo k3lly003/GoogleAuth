@@ -1,0 +1,69 @@
+version: 2
+orbs:
+  coveralls: coveralls/coveralls@1.0.6
+jobs:
+  build:
+    docker:
+      - image: cimg/node:18.17.0
+    working_directory: ~/repo
+    steps:
+      - setup_remote_docker:
+          version: 20.10.7
+      - checkout
+      # Update npm
+      - run:
+          name: update-npm
+          command: "sudo npm install -g npm@latest"
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+      - run:
+          name: Install dependencies
+          command: npm install
+      - save_cache:
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+      - run:
+          name: Create reports directory
+          command: mkdir -p ./reports/
+      # Run coverage
+      - run:
+          name: Run coverage
+          command: npm run test || true
+          when: always
+      - run:
+          name: Upload coverage to Coveralls
+          command: npx coveralls < coverage/lcov.info
+      # Run coverage report for Code Climate
+      - run:
+          name: Setup Code Climate test-reporter
+          command: |
+            # download test reporter as a static binary
+            curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+            chmod +x ./cc-test-reporter
+            ./cc-test-reporter before-build
+          when: always
+      - run:
+          name: Make cc-test-reporter executable
+          command: chmod +x ./cc-test-reporter
+      - run:
+          name: Send coverage report to Code Climate
+          command: |
+            ./cc-test-reporter after-build -t lcov
+          when: always
+      # Upload results
+      - store_artifacts: # upload test coverage as artifact
+          path: ./coverage/lcov.info
+          prefix: tests
+      - run:
+          name: Debugging step
+          command: |
+            echo "Exit status of previous command: $?"
+            cat ./reports/junit.xml || true
+            cat ./coverage/lcov.info || true
+            ls -la ./coverage
+            ls -la ./reports
